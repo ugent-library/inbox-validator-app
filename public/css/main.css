@@ -1,0 +1,25 @@
+body { background-color: #f8f9fa; }
+
+* {
+    box-sizing: border-box;
+}
+
+.error { color: red; }
+
+.file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* One class per file type */
+.icon-pdf  { background: #FCEBEB; color: #A32D2D; }
+.icon-json { background: #EEEDFE; color: #534AB7; }
+.icon-txt  { background: #F1EFE8; color: #5F5E5A; }
+.icon-img  { background: #EAF3DE; color: #3B6D11; }
+.icon-folder { background: #E6F1FB; color: #185FA5; }
