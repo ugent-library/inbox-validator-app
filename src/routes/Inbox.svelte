@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import { listInbox , type Member } from "../inbox";
 
-	let inbox = "http://localhost:3001/inbox/";
+	//let inbox = "http://localhost:3001/inbox/";
+	let inbox = "https://patrickhochstenbach.net/";
 
 	let inboxContents : Member[];
 
@@ -26,7 +27,23 @@
   <tbody>
     {#each inboxContents as member}
       <tr>
-        <td><span class="member-icon icon-txt">{ member.mimeType ?? 'JSON-LD'}</span></td>
+        <td>
+          <span class="member-icon icon-txt">
+            {#if member.mimeType}
+              {#if member.mimeType === 'application/ld+json'}
+              JSON-LD
+              {:else if member.mimeType === 'application/json'}
+              JSON
+              {:else if member.mimeType === 'text/turtle'}
+              TURTLE
+              {:else}
+              OTHER
+              {/if}
+            {:else}
+              OTHER
+            {/if}
+          </span>
+        </td>
         <td><a href="#/notification/{member.name}">{member.name}</a></td>
         <td class="text-end text-muted">{ member.size ?? "--"}</td>
         <td class="text-muted">{ member.date ?? "--"}</td>

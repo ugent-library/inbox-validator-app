@@ -19,6 +19,9 @@
     "vite": "^5.0.0"
   },
   "dependencies": {
+    "@rdfjs/types": "^2.0.1",
+    "@types/streamify-string": "^1.0.4",
+    "rdf-parse": "^5.0.0",
     "svelte-spa-router": "^4.0.0"
   }
 }
