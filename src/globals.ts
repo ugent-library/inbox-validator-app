@@ -1,0 +1,1 @@
+export const INBOX_URL = "http://localhost:3001/inbox/";

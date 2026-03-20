@@ -8,7 +8,7 @@ const IANA = 'http://www.w3.org/ns/iana/media-types/';
 const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 
 export interface Notification {
-    data: string
+    data: any 
 }
 
 export interface Member {
@@ -25,10 +25,10 @@ export async function getNotification(url: string) : Promise<Notification> {
         throw new Error(`HTTP error: ${response.status}`);
     }
 
-    const text = await response.text();
+    const json = await response.json();
 
     return {
-        data: text
+        data: json
     } as Notification;
 }
 

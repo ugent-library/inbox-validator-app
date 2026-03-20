@@ -1,10 +1,10 @@
 <script lang="ts">
   //import 'bootstrap/dist/css/bootstrap.min.css';
   //import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+  import { INBOX_URL } from "../globals";
 	import { listInbox , type Member } from "../inbox";
 
-	//let inbox = "http://localhost:3001/inbox/";
-	let inbox = "https://patrickhochstenbach.net/";
+	let inbox = INBOX_URL;
 </script>
 
 {#await listInbox(inbox)}
