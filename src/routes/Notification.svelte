@@ -111,7 +111,7 @@
     <div class="card-body">
       <h3>Incoming</h3>
       <h6>{inbox}{params.name}</h6>
-      <pre bind:this={p} class="json-viewer border rounded p-3 bg-dark">{@html highlight(JSON.stringify(notification.data,null,4))}</pre>
+      <pre bind:this={p} class="json-viewer border rounded p-3 bg-dark">{@html highlight(notification.data)}</pre>
       <button class="btn btn-primary" on:click={handleValidate}>Validate</button>
       <button class="btn btn-info" on:click={handleAccept}>Accept</button>
       <button class="btn btn-danger" on:click={handleReject}>Reject</button>
