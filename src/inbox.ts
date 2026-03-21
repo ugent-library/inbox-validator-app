@@ -3,16 +3,38 @@ import { rdfParser } from "rdf-parse";
 import type { Quad } from "@rdfjs/types";
 import N3 from 'n3';
 
-const AS = 'https://www.w3.org/ns/activitystreams#';
-const LDP = 'http://www.w3.org/ns/ldp#';
+const AS    = 'https://www.w3.org/ns/activitystreams#';
+const LDP   = 'http://www.w3.org/ns/ldp#';
 const POSIX = 'http://www.w3.org/ns/posix/stat#';
-const IANA = 'http://www.w3.org/ns/iana/media-types/';
+const IANA  = 'http://www.w3.org/ns/iana/media-types/';
+const IETF  = 'http://www.iana.org/assignments/relation/';
 
 export interface Agent {
     id: string;
     type: string;
     name: string | undefined;
     inbox: string | undefined;
+}
+
+export interface ItemObject {
+    id?: string;
+    type?: string[];
+    mediaType?: string;
+}
+
+export interface PageObject {
+    id?: string;
+    type?: string[];
+    citeAs?: string;
+    item?: ItemObject;
+}
+
+export interface RelationshipObject {
+    id?: string;
+    type?: string[];
+    relSubject?: string;
+    relPredicate?: string;
+    relObject?: string;
 }
 
 export interface GenericObject {
@@ -22,7 +44,7 @@ export interface GenericObject {
     actor?: Agent;
     context?: GenericObject;
     origin?: Agent;
-    object?: GenericObject;
+    object?: GenericObject | PageObject | RelationshipObject;
     target?: Agent;
     summary?: string;
 }
@@ -110,14 +132,16 @@ async function parseNotification(data: string, type: string) : Promise<Notificat
     return notification;
 }
 
-async function parseNotificationObject(store: N3.Store, id: string) : Promise<GenericObject> {
-    const notification : GenericObject = { id };
+async function parseNotificationObject(store: N3.Store, id: string) 
+    : Promise<GenericObject | PageObject | ItemObject | RelationshipObject> {
+    const notification : any = { id };
 
     const engine = new window.Comunica.QueryEngine();
     const bindingsStream = await engine.queryBindings(
         `
         PREFIX as: <${AS}>
         PREFIX ldp: <${LDP}>
+        PREFIX ietf: <${IETF}>
         SELECT 
             ?type ?inReplyTo 
             ?actor ?actorType ?actorName ?actorInbox
@@ -125,6 +149,8 @@ async function parseNotificationObject(store: N3.Store, id: string) : Promise<Ge
             ?object
             ?target ?targetType ?targetName ?targetInbox
             ?summary ?context
+            ?citeAs ?mediaType ?item
+            ?relSubject ?relPredicate ?relObject
         WHERE {
             <${id}> a ?type
             OPTIONAL {
@@ -169,12 +195,29 @@ async function parseNotificationObject(store: N3.Store, id: string) : Promise<Ge
             OPTIONAL {
                 <${id}> as:summary ?summary .
             }
+            OPTIONAL {
+                <${id}> ietf:cite-as ?citeAs .
+            }
+            OPTIONAL {
+                <${id}> as:mediaType ?mediaType .
+            }
+            OPTIONAL {
+                <${id}> ietf:item ?item .
+            }
+            OPTIONAL {
+                <${id}> a as:Relationship ;
+                    as:subject ?relSubject ;
+                    as:relationship ?relPredicate ;
+                    as:object ?relObject.
+            }
         }
         `,
         {
             sources: [store]
         }
     );
+
+    let objectType = 'GenericObject';
 
     const bindings = await bindingsStream.toArray();
 
@@ -196,62 +239,118 @@ async function parseNotificationObject(store: N3.Store, id: string) : Promise<Ge
         let targetInbox;
         let summary;
         let context;
+        let citeAs;
+        let mediaType;
+        let item;
+        let relSubject;
+        let relPredicate;
+        let relObject;
 
         for (let i = 0 ; i < bindings.length ; i++) {
-                if (bindings[i]?.get('type')) {
-                    typeSet.add(bindings[i]?.get('type').value);
-                }
-                if (bindings[i]?.get('inReplyTo')) {
-                    replySet.add(bindings[i]?.get('inReplyTo').value);
-                }
-                if (bindings[i]?.get('actor')) {
-                    actor = bindings[i]?.get('actor').value;
-                }
-                if (bindings[i]?.get('actorType')) {
-                    actorType = bindings[i]?.get('actorType').value;
-                }
-                if (bindings[i]?.get('actorName')) {
-                    actorName = bindings[i]?.get('actorName').value;
-                }
-                if (bindings[i]?.get('actorInbox')) {
-                    actorInbox = bindings[i]?.get('actorInbox').value;
-                }
-                if (bindings[i]?.get('origin')) {
-                    origin = bindings[i]?.get('origin').value;
-                }
-                if (bindings[i]?.get('originType')) {
-                    originType = bindings[i]?.get('originType').value;
-                }
-                if (bindings[i]?.get('originName')) {
-                    originName = bindings[i]?.get('originName').value;
-                }
-                if (bindings[i]?.get('originInbox')) {
-                    originInbox = bindings[i]?.get('originInbox').value;
-                }
-                if (bindings[i]?.get('object')) {
-                    object = bindings[i]?.get('object').value;
-                } 
-                if (bindings[i]?.get('target')) {
-                    target = bindings[i]?.get('target').value;
-                }
-                if (bindings[i]?.get('targetType')) {
-                    targetType = bindings[i]?.get('targetType').value;
-                }
-                if (bindings[i]?.get('targetName')) {
-                    targetName = bindings[i]?.get('targetName').value;
-                }
-                if (bindings[i]?.get('targetInbox')) {
-                    targetInbox = bindings[i]?.get('targetInbox').value;
-                }
-                if (bindings[i]?.get('summary')) {
-                    summary = bindings[i]?.get('summary').value;
-                }
-                if (bindings[i]?.get('context')) {
-                    summary = bindings[i]?.get('context').value;
-                }
+            if (bindings[i]?.get('type')) {
+                typeSet.add(bindings[i]?.get('type').value);
+            }
+            if (bindings[i]?.get('inReplyTo')) {
+                replySet.add(bindings[i]?.get('inReplyTo').value);
+            }
+            if (bindings[i]?.get('actor')) {
+                actor = bindings[i]?.get('actor').value;
+            }
+            if (bindings[i]?.get('actorType')) {
+                actorType = bindings[i]?.get('actorType').value;
+            }
+            if (bindings[i]?.get('actorName')) {
+                actorName = bindings[i]?.get('actorName').value;
+            }
+            if (bindings[i]?.get('actorInbox')) {
+                actorInbox = bindings[i]?.get('actorInbox').value;
+            }
+            if (bindings[i]?.get('origin')) {
+                origin = bindings[i]?.get('origin').value;
+            }
+            if (bindings[i]?.get('originType')) {
+                originType = bindings[i]?.get('originType').value;
+            }
+            if (bindings[i]?.get('originName')) {
+                originName = bindings[i]?.get('originName').value;
+            }
+            if (bindings[i]?.get('originInbox')) {
+                originInbox = bindings[i]?.get('originInbox').value;
+            }
+            if (bindings[i]?.get('object')) {
+                object = bindings[i]?.get('object').value;
+            } 
+            if (bindings[i]?.get('target')) {
+                target = bindings[i]?.get('target').value;
+            }
+            if (bindings[i]?.get('targetType')) {
+                targetType = bindings[i]?.get('targetType').value;
+            }
+            if (bindings[i]?.get('targetName')) {
+                targetName = bindings[i]?.get('targetName').value;
+            }
+            if (bindings[i]?.get('targetInbox')) {
+                targetInbox = bindings[i]?.get('targetInbox').value;
+            }
+            if (bindings[i]?.get('summary')) {
+                summary = bindings[i]?.get('summary').value;
+            }
+            if (bindings[i]?.get('context')) {
+                summary = bindings[i]?.get('context').value;
+            }
+            if (bindings[i]?.get('citeAs')) {
+                citeAs = bindings[i]?.get('citeAs').value;
+            }
+            if (bindings[i]?.get('mediaType')) {
+                mediaType = bindings[i]?.get('mediaType').value;
+            }
+            if (bindings[i]?.get('item')) {
+                item = bindings[i]?.get('item').value;
+            }
+            if (bindings[i]?.get('relSubject')) {
+                relSubject = bindings[i]?.get('relSubject').value;
+            }
+            if (bindings[i]?.get('relPredicate')) {
+                relPredicate = bindings[i]?.get('relPredicate').value;
+            }
+            if (bindings[i]?.get('relObject')) {
+                relObject = bindings[i]?.get('relObject').value;
+            }
         }
 
         notification.type = [...typeSet];
+
+        if (hasASObjectType(typeSet)) {
+            objectType = 'PageObject';
+
+            if (citeAs) {
+                notification.citeAs = citeAs;
+            }
+
+            if (mediaType) {
+                notification.mediaType = mediaType;
+                objectType = 'ItemObject';
+            }
+
+            if (item) {
+                notification.item = await parseNotificationObject(store,item);
+            }
+
+            if (relSubject) {
+                notification.relSubject = relSubject;
+                objectType = 'RelationshipObject';
+            }
+
+            if (relPredicate) {
+                notification.relPredicate = relPredicate;
+                objectType = 'RelationshipObject';
+            }
+
+            if (relObject) {
+                notification.relObject = relObject;
+                objectType = 'RelationshipObject';
+            }
+        }
 
         if (replySet.size) {
             notification.inReplyTo = [...replySet];
@@ -297,7 +396,19 @@ async function parseNotificationObject(store: N3.Store, id: string) : Promise<Ge
         }
     }
 
-    return notification;
+    switch (objectType) {
+        case 'GenericObject':
+            return notification as GenericObject;
+        case 'PageObject':
+            return notification as PageObject;
+        case 'ItemObject':
+            return notification as ItemObject;
+        case 'RelationshipObject':
+            delete notification.object;
+            return notification as RelationshipObject;
+        default:
+            return notification as GenericObject;
+    }
 }
 
 async function parseInbox(data: string, type: string) : Promise<Member[]> {
@@ -364,6 +475,27 @@ async function parseInbox(data: string, type: string) : Promise<Member[]> {
             throw new Error(`Unknown parsing error: ${e}`);
         }
     }
+}
+
+function hasASObjectType(set: Set<string>) : boolean {
+    const types = [ 
+        'Activity', 'Application', 'Article' , 'Audio',
+        'Collection', 'CollectionPage', 'Relationship', 
+        'Document', 'Event', 'Group', 'Image',
+        'IntransitiveActivity', 'Note', 'Object',
+        'OrderedCollection', 'OrderedCollectionPage', 
+        'Organization', 'Page', 'Person', 'Place',
+        'Profile', 'Question', 'Service', 'Tombstone',
+        'Video'
+    ];
+
+    for (let i = 0 ; i < types.length ; i++) {
+        if (set.has(`${AS}${types[i]}`)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function mainId(store: N3.Store) : string | null {
