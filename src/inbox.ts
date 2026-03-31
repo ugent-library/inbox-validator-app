@@ -20,6 +20,7 @@ export interface ItemObject {
     id?: string;
     type?: string[];
     mediaType?: string;
+    kind: 'item';
 }
 
 export interface PageObject {
@@ -27,6 +28,7 @@ export interface PageObject {
     type?: string[];
     citeAs?: string;
     item?: ItemObject;
+    kind: 'page';
 }
 
 export interface RelationshipObject {
@@ -35,6 +37,7 @@ export interface RelationshipObject {
     relSubject?: string;
     relPredicate?: string;
     relObject?: string;
+    kind: 'relationship';
 }
 
 export interface GenericObject {
@@ -47,6 +50,7 @@ export interface GenericObject {
     object?: GenericObject | PageObject | RelationshipObject;
     target?: Agent;
     summary?: string;
+    kind: 'generic';
 }
 
 export interface Notification {
@@ -120,7 +124,7 @@ async function parseNotification(data: string, type: string) : Promise<Notificat
             throw new Error(`no root id found in the data`);
         }
 
-        notification.object = await parseNotificationObject(store,root);
+        notification.object = await parseNotificationObject(store,root) as GenericObject;
     }
     catch (e) {
         console.log(e);
@@ -398,15 +402,20 @@ async function parseNotificationObject(store: N3.Store, id: string)
 
     switch (objectType) {
         case 'GenericObject':
+            notification.kind = 'generic';
             return notification as GenericObject;
         case 'PageObject':
+            notification.kind = 'page';
             return notification as PageObject;
         case 'ItemObject':
+            notification.kind = 'item';
             return notification as ItemObject;
         case 'RelationshipObject':
             delete notification.object;
+            notification.kind = 'relationship';
             return notification as RelationshipObject;
         default:
+            notification.kind = 'generic';
             return notification as GenericObject;
     }
 }

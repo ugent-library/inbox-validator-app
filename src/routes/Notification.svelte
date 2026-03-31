@@ -1,26 +1,18 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
+    import { appData } from '../store';
     import { INBOX_URL } from "../globals";
 	import { getNotification , type Notification } from "../inbox";
     import { validateNotification } from "../validate";
+    import Toggle from "./Toggle.svelte";
+    import ParsedNotification from './ParsedNotification.svelte';
+    import RawNotification from './RawNotification.svelte';
 
     export let params: { name?: string } = {};
 
+    let viewSource = false;
     let inbox = INBOX_URL;
     let notificationUrl = inbox + params.name;
-
-    function highlight(json: string) : string {
-        return json
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            .replace(
-                /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-                m => {
-                    if (/^"/.test(m)) return /:$/.test(m) ? `<span class="json-key">${m}</span>` : `<span class="json-str">${m}</span>`;
-                    if (/true|false/.test(m)) return `<span class="json-bool">${m}</span>`;
-                    if (/null/.test(m)) return `<span class="json-null">${m}</span>`;
-                return `<span class="json-num">${m}</span>`;
-            }
-      );
-    }
 
     // The p-element holds the source for the notification
     let p : HTMLPreElement;
@@ -46,9 +38,13 @@
     let validationReport: Report;
 
     async function handleValidate() {
+        let data = $appData?.data;
+        if (!data) {
+            return;
+        }
         status = Status.VALIDATE;
         try {
-            const result = await validateNotification(p.textContent);
+            const result = await validateNotification(data);
             validationReport = {
                 data: result.data,
                 isError: false
@@ -99,19 +95,26 @@
     async function handleCancel() {
         status = Status.DEFAULT;
     }
+
+    onMount(async () => {
+        $appData = await getNotification(notificationUrl) as Notification;
+    });
 </script>
 
 <nav class="navbar">
     <a href="/" class="btn btn-light text-decoration-none">INBOX</a>
 </nav>
 
-{#await getNotification(notificationUrl)}
-    <p>Loading {notificationUrl}</p>
-{:then notification} 
+{#if $appData} 
     <div class="card-body">
-      <h3>Incoming</h3>
+      <h3>Notification {$appData.object?.id}</h3>
       <h6>{inbox}{params.name}</h6>
-      <pre bind:this={p} class="json-viewer border rounded p-3 bg-dark">{@html highlight(notification.data)}</pre>
+      <Toggle bind:enabled={viewSource}/>
+      {#if viewSource}
+        <RawNotification notification={$appData}/>
+      {:else}
+        <ParsedNotification notification={$appData}/>
+      {/if}
       <button class="btn btn-primary" on:click={handleValidate}>Validate</button>
       <button class="btn btn-info" on:click={handleAccept}>Accept</button>
       <button class="btn btn-danger" on:click={handleReject}>Reject</button>
@@ -175,26 +178,9 @@
         <h3>Preview Notification</h3>
     </div>
     {/if}
-{:catch error}
-    <p class="error">Failed to load {notificationUrl}</p>
-{/await}
+{/if}
 
 <style>
-  .json-viewer {
-    font-size: 0.85rem;
-    line-height: 1.6;
-    max-height: 500px;
-    overflow: auto;
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-  }
-
-  :global(.json-key)  { color: #9cdcfe; }
-  :global(.json-str)  { color: #ce9178; }
-  :global(.json-num)  { color: #b5cea8; }
-  :global(.json-bool) { color: #569cd6; }
-  :global(.json-null) { color: #808080; }
-
   .error {
     color: #dc3545;          /* Bootstrap's danger red */
     background-color: #f8d7da;
