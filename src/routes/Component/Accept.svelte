@@ -85,7 +85,7 @@
         }
 
         try {
-            const response = await sendNotification(inbox,payload); 
+            await sendNotification(inbox,payload); 
             dispatch('changeTab','Successfully Sent Notification!');
             playWhoosh();
         }
