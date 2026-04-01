@@ -9,13 +9,18 @@
     import { createEventDispatcher } from 'svelte';
     import whooshUrl from '../../assets/woosh.mp3';
     import { THIS_ORIGIN } from '../../globals';
+    
+    const AS    = 'https://www.w3.org/ns/activitystreams#';
     const dispatch = createEventDispatcher();
 
+    // Tentative fields
     let isTentative = false;
     let summary = "";
 
+    // Read in the notification
     let notification : Notification = get(appData) as Notification;
 
+    // Find out the right actor...
     const actorInit : Agent = notification.object?.target ?
         notification.object?.target : {
             id: genUUID(),
@@ -24,6 +29,7 @@
             inbox: undefined
         };
 
+    // Find out the right inbox to send notifications to...
     const inboxInit : string | undefined = notification.object?.origin?.inbox ?
             notification.object?.origin?.inbox :
             notification.object?.actor?.inbox;
@@ -31,12 +37,11 @@
     let actor: Agent = { ...actorInit };
     let inbox: string | undefined = inboxInit;
 
+    // Possible actor types (limited for now)...
     interface Category {
         iri: string;
         label: string;
     }
-
-    const AS    = 'https://www.w3.org/ns/activitystreams#';
 
     const categories : Category[] = [
         { iri: `${AS}Person`, label: 'Person' },
@@ -44,7 +49,7 @@
         { iri: `${AS}Service`, label: 'Service' }
     ];
 
-    function  handleReset() {
+    function handleReset() {
         actor = {...actorInit };
         inbox = inboxInit;
     }
