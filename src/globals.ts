@@ -1,10 +1,17 @@
+import { type Agent } from "./inbox";
 export const INBOX_URL = "http://localhost:5051/inbox/";
 //export const INBOX_URL = "https://patrickhochstenbach.net/test/";
 export const VALIDATOR_URL =  'http://localhost:3000/validate';
+export const THIS_ACTOR : Agent = {
+    id: "http://generic.service.org",
+    type: "https://www.w3.org/ns/activitystreams#Person",
+    name: "My Lovely Service",
+    inbox: undefined
+};
 export const THIS_ORIGIN : any = {
     "id": "http://lib.ugent.be/inbox-validator-app",
     "name": "INBOX VIEWER",
-    "type": "Service",
+    "type": "https://www.w3.org/ns/activitystreams#Service",
     "inbox": INBOX_URL
 };
 export const LD_CACHE : Record<string,any> = {
